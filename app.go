@@ -55,7 +55,7 @@ func organizeFiles(directory string, config Config) error {
 }
 
 func main() {
-	configPath := flag.String("config", "config.json", "Path to the configuration file")
+	configPath := flag.String("config", "example_config.json", "Path to the configuration file")
 	directory := flag.String("dir", ".", "Directory to organize")
 	help := flag.Bool("help", false, "Show help message")
 	flag.Parse()
