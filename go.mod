@@ -1,3 +1,3 @@
 module russssl/file_organizer
 
-go 1.22
+go 1.22.4
