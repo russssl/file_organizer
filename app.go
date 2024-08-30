@@ -34,6 +34,17 @@ var defaultConfig = Config{
 	},
 }
 
+// flags
+var (
+	configPath   = flag.String("config", "", "Path to the configuration file")
+	directory    = flag.String("dir", ".", "Directory to organize")
+	help         = flag.Bool("help", false, "Show help message")
+	printDefault = flag.Bool("print-default", false, "Print default config")
+	recursive    = flag.Bool("r", false, "Organize files recursively, including subdirectories")
+	v            = flag.Bool("v", false, "Show version")
+	dryRun       = flag.Bool("dry-run", false, "Dry run (do not move files)")
+)
+
 func loadConfig(configPath string) (Config, error) {
 	var config Config
 	if configPath == "" {
@@ -53,7 +64,7 @@ func loadConfig(configPath string) (Config, error) {
 	return config, nil
 }
 
-func organizeFiles(directory string, config Config, recursive bool) error {
+func organizeFiles(directory string, config Config, recursive bool, dryRun bool) error {
 	filesMoved := 0
 	err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -65,30 +76,32 @@ func organizeFiles(directory string, config Config, recursive bool) error {
 		}
 		ext := filepath.Ext(info.Name())
 		if destDir, ok := config.Rules[ext]; ok {
-			destPath := filepath.Join(directory, destDir, info.Name())
-			os.MkdirAll(filepath.Join(directory, destDir), os.ModePerm)
-			err := os.Rename(path, destPath)
-			if err != nil {
-				return err
+			if !dryRun {
+				destPath := filepath.Join(directory, destDir, info.Name())
+				os.MkdirAll(filepath.Join(directory, destDir), os.ModePerm)
+				err := os.Rename(path, destPath)
+				if err != nil {
+					return err
+				}
+				fmt.Printf("Moved %s to %s\n", path, destPath)
+				filesMoved++
+			} else {
+				fmt.Printf("Would move %s to %s\n", path, filepath.Join(directory, destDir, info.Name()))
 			}
-			fmt.Printf("Moved %s to %s\n", path, destPath)
-			filesMoved++
 		}
 		return nil
 	})
 	if filesMoved == 0 {
-		fmt.Println("No files were moved")
+		if dryRun {
+			fmt.Println("No files to move")
+		} else {
+			fmt.Println("No files moved")
+		}
 	}
 	return err
 }
 
 func main() {
-	configPath := flag.String("config", "", "Path to the configuration file")
-	directory := flag.String("dir", ".", "Directory to organize")
-	help := flag.Bool("help", false, "Show help message")
-	printDefault := flag.Bool("print-default", false, "Print default config")
-	recursive := flag.Bool("r", false, "Organize files recursively, including subdirectories")
-	v := flag.Bool("v", false, "Show version")
 
 	flag.Parse()
 
@@ -111,7 +124,7 @@ func main() {
 		fmt.Println(string(defaultConfigJson))
 		return
 	}
-	err = organizeFiles(*directory, config, *recursive)
+	err = organizeFiles(*directory, config, *recursive, *dryRun)
 
 	if err != nil {
 		log.Fatalf("Error organizing files: %v\n", err)
